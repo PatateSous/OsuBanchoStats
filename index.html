@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Osu!bancho Stats</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .chart-container {
+            max-width: 800px;
+            margin: 0 auto 40px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Osu!bancho Stats</h1>
+
+    <div class="chart-container">
+        <h2>Ranking</h2>
+        <canvas id="rankingChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h2>Performance Points (PP)</h2>
+        <canvas id="ppChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h2>Accuracy</h2>
+        <canvas id="accuracyChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h2>Level</h2>
+        <canvas id="levelChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h2>Country Rank</h2>
+        <canvas id="countryRankChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h2>Total and Ranked Score</h2>
+        <canvas id="scoreChart"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h2>Playcount</h2>
+        <canvas id="playcountChart"></canvas>
+    </div>
+
+    <script>
+        async function fetchData() {
+            try {
+                const response = await fetch('data.json');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                const data = await response.json();
+                console.log('Fetched data:', data);
+                return data;
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                return null;
+            }
+        }
+
+        function formatNumber(value) {
+            return new Intl.NumberFormat().format(value);
+        }
+
+        async function drawChart(chartId, dataType, label, reverseY = false) {
+            const data = await fetchData();
+            if (!data) {
+                console.error('No data to display');
+                return;
+            }
+
+            const ctx = document.getElementById(chartId).getContext('2d');
+
+            // Ensure data for the given type exists
+            if (!data.tomoko || !data.tomoko[dataType] || !data.nkx || !data.nkx[dataType] || !data.tomoko.dates) {
+                console.error(`Data for type ${dataType} is missing or incorrectly formatted`);
+                return;
+            }
+
+            const tomokoData = data.tomoko.dates.map((date, index) => ({
+                x: new Date(date),
+                y: data.tomoko[dataType][index]
+            }));
+            const nkxData = data.nkx.dates.map((date, index) => ({
+                x: new Date(date),
+                y: data.nkx[dataType][index]
+            }));
+
+            // Calculate min and max dates
+            const minDate = new Date(Math.min(...data.tomoko.dates.concat(data.nkx.dates).map(date => new Date(date).getTime())));
+            const maxDate = new Date(Math.max(...data.tomoko.dates.concat(data.nkx.dates).map(date => new Date(date).getTime())));
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: `Tomoko ${label}`,
+                            data: tomokoData,
+                            borderColor: 'rgba(255, 105, 180, 1)', // Pink color
+                            backgroundColor: 'rgba(255, 105, 180, 0.2)', // Light pink
+                            fill: false,
+                            lineTension: 0.1
+                        },
+                        {
+                            label: `NKX ${label}`,
+                            data: nkxData,
+                            borderColor: 'rgba(128, 0, 128, 1)', // Purple color
+                            backgroundColor: 'rgba(128, 0, 128, 0.2)', // Light purple
+                            fill: false,
+                            lineTension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(tooltipItem) {
+                                    return tooltipItem.dataset.label + ': ' + formatNumber(tooltipItem.raw.y);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                tooltipFormat: 'dd MMM yyyy',
+                                displayFormats: {
+                                    day: 'dd MMM yyyy'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            },
+                            min: new Date(minDate.getTime() - 24 * 60 * 60 * 1000).toISOString(), // Min date with padding
+                            max: new Date(maxDate.getTime() + 24 * 60 * 60 * 1000).toISOString(), // Max date with padding
+                            ticks: {
+                                source: 'data',
+                                autoSkip: false,
+                                maxRotation: 0,
+                                minRotation: 0,
+                                padding: 10 // Add padding to the left and right of the chart
+                            },
+                            bounds: 'ticks', // Start the chart at the first tick (full left)
+                            offset: true // Ensure the chart starts at the full left
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: label
+                            },
+                            reverse: reverseY,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatNumber(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function drawScoreChart() {
+            const data = await fetchData();
+            if (!data) {
+                console.error('No data to display');
+                return;
+            }
+
+            const ctx = document.getElementById('scoreChart').getContext('2d');
+
+            // Ensure data for the given type exists
+            if (!data.tomoko || !data.tomoko.ranked_score || !data.tomoko.total_score || !data.nkx || !data.nkx.ranked_score || !data.nkx.total_score || !data.tomoko.dates) {
+                console.error(`Data for scores is missing or incorrectly formatted`);
+                return;
+            }
+
+            const tomokoRankedScore = data.tomoko.dates.map((date, index) => ({
+                x: new Date(date),
+                y: data.tomoko.ranked_score[index]
+            }));
+            const nkxRankedScore = data.nkx.dates.map((date, index) => ({
+                x: new Date(date),
+                y: data.nkx.ranked_score[index]
+            }));
+            const tomokoTotalScore = data.tomoko.dates.map((date, index) => ({
+                x: new Date(date),
+                y: data.tomoko.total_score[index]
+            }));
+            const nkxTotalScore = data.nkx.dates.map((date, index) => ({
+                x: new Date(date),
+                y: data.nkx.total_score[index]
+            }));
+
+            // Calculate min and max dates
+            const minDate = new Date(Math.min(...data.tomoko.dates.concat(data.nkx.dates).map(date => new Date(date).getTime())));
+            const maxDate = new Date(Math.max(...data.tomoko.dates.concat(data.nkx.dates).map(date => new Date(date).getTime())));
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: `Tomoko Ranked Score`,
+                            data: tomokoRankedScore,
+                            borderColor: 'rgba(255, 105, 180, 1)', // Pink color
+                            backgroundColor: 'rgba(255, 105, 180, 0.2)', // Light pink
+                            fill: false,
+                            lineTension: 0.1
+                        },
+                        {
+                            label: `NKX Ranked Score`,
+                            data: nkxRankedScore,
+                            borderColor: 'rgba(128, 0, 128, 1)', // Purple color
+                            backgroundColor: 'rgba(128, 0, 128, 0.2)', // Light purple
+                            fill: false,
+                            lineTension: 0.1
+                        },
+                        {
+                            label: `Tomoko Total Score`,
+                            data: tomokoTotalScore,
+                            borderColor: 'rgba(0, 191, 255, 1)', // Deep Sky Blue color
+                            backgroundColor: 'rgba(0, 191, 255, 0.2)', // Light Deep Sky Blue
+                            fill: false,
+                            lineTension: 0.1
+                        },
+                        {
+                            label: `NKX Total Score`,
+                            data: nkxTotalScore,
+                            borderColor: 'rgba(34, 139, 34, 1)', // Forest Green color
+                            backgroundColor: 'rgba(34, 139, 34, 0.2)', // Light Forest Green
+                            fill: false,
+                            lineTension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(tooltipItem) {
+                                    return tooltipItem.dataset.label + ': ' + formatNumber(tooltipItem.raw.y);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                tooltipFormat: 'dd MMM yyyy',
+                                displayFormats: {
+                                    day: 'dd MMM yyyy'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            },
+                            min: new Date(minDate.getTime() - 24 * 60 * 60 * 1000).toISOString(), // Min date with padding
+                            max: new Date(maxDate.getTime() + 24 * 60 * 60 * 1000).toISOString(), // Max date with padding
+                            ticks: {
+                                source: 'data',
+                                autoSkip: false,
+                                maxRotation: 0,
+                                minRotation: 0,
+                                padding: 10 // Add padding to the left and right of the chart
+                            },
+                            bounds: 'ticks', // Start the chart at the first tick (full left)
+                            offset: true // Ensure the chart starts at the full left
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Score'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatNumber(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadCharts() {
+            await drawChart('rankingChart', 'rank', 'Ranking', true);
+            await drawChart('ppChart', 'pp', 'Performance Points (PP)');
+            await drawChart('accuracyChart', 'accuracy', 'Accuracy (%)');
+            await drawChart('levelChart', 'level', 'Level');
+            await drawChart('countryRankChart', 'pp_country_rank', 'Country Rank');
+            await drawScoreChart();
+            await drawChart('playcountChart', 'playcount', 'Playcount');
+        }
+
+        loadCharts();
+    </script>
+</body>
+</html>
