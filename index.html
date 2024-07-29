@@ -56,6 +56,16 @@
         <canvas id="playcountChart"></canvas>
     </div>
 
+    <div class="chart-container">
+        <h2>Top 100 Plays PP (Tomoko)</h2>
+        <canvas id="topPlaysChartTomoko"></canvas>
+    </div>
+
+    <div class="chart-container">
+        <h2>Top 100 Plays PP (NKX)</h2>
+        <canvas id="topPlaysChartNKX"></canvas>
+    </div>
+
     <script>
         async function fetchData() {
             try {
@@ -68,6 +78,21 @@
                 return data;
             } catch (error) {
                 console.error('Error fetching data:', error);
+                return null;
+            }
+        }
+
+        async function fetchScores() {
+            try {
+                const response = await fetch('scores.json');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                const data = await response.json();
+                console.log('Fetched scores:', data);
+                return data;
+            } catch (error) {
+                console.error('Error fetching scores:', error);
                 return null;
             }
         }
@@ -313,6 +338,69 @@
             });
         }
 
+        async function drawTopPlaysChart(chartId, username) {
+            const scores = await fetchScores();
+            if (!scores || !scores[username] || !scores[username].top_plays) {
+                console.error(`Scores for ${username} are missing or incorrectly formatted`);
+                return;
+            }
+
+            const ctx = document.getElementById(chartId).getContext('2d');
+
+            const topPlaysData = scores[username].top_plays.map((play, index) => ({
+                x: index + 1,
+                y: play.pp
+            }));
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: topPlaysData.map(play => play.x),
+                    datasets: [{
+                        label: `${username} Top Plays PP`,
+                        data: topPlaysData.map(play => play.y),
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(tooltipItem) {
+                                    return formatNumber(tooltipItem.raw);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Play Index'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'PP'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatNumber(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         async function loadCharts() {
             await drawChart('rankingChart', 'rank', 'Ranking', true);
             await drawChart('ppChart', 'pp', 'Performance Points (PP)');
@@ -321,6 +409,8 @@
             await drawChart('countryRankChart', 'pp_country_rank', 'Country Rank');
             await drawScoreChart();
             await drawChart('playcountChart', 'playcount', 'Playcount');
+            await drawTopPlaysChart('topPlaysChartTomoko', 'tomoko');
+            await drawTopPlaysChart('topPlaysChartNKX', 'nkx');
         }
 
         loadCharts();
