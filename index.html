@@ -101,6 +101,32 @@
             return new Intl.NumberFormat().format(value);
         }
 
+        function createYScale(label, reverseY = false) {
+            return {
+                title: {
+                    display: true,
+                    text: label
+                },
+                reverse: reverseY,
+                beginAtZero: false, // Allow the chart to autoscale below zero if needed
+                min: undefined, // Autoscale min value
+                max: undefined, // Autoscale max value
+                ticks: {
+                    callback: function(value) {
+                        return formatNumber(value);
+                    }
+                }
+            };
+        }
+
+        function getMinMaxDate(dates) {
+            const dateTimes = dates.map(date => new Date(date).getTime());
+            return {
+                min: new Date(Math.min(...dateTimes)),
+                max: new Date(Math.max(...dateTimes))
+            };
+        }
+
         async function drawChart(chartId, dataType, label, reverseY = false) {
             const data = await fetchData();
             if (!data) {
@@ -126,8 +152,7 @@
             }));
 
             // Calculate min and max dates
-            const minDate = new Date(Math.min(...data.tomoko.dates.concat(data.nkx.dates).map(date => new Date(date).getTime())));
-            const maxDate = new Date(Math.max(...data.tomoko.dates.concat(data.nkx.dates).map(date => new Date(date).getTime())));
+            const { min, max } = getMinMaxDate(data.tomoko.dates.concat(data.nkx.dates));
 
             new Chart(ctx, {
                 type: 'line',
@@ -179,8 +204,8 @@
                                 display: true,
                                 text: 'Date'
                             },
-                            min: new Date(minDate.getTime() - 24 * 60 * 60 * 1000).toISOString(), // Min date with padding
-                            max: new Date(maxDate.getTime() + 24 * 60 * 60 * 1000).toISOString(), // Max date with padding
+                            min: min.toISOString(),
+                            max: max.toISOString(),
                             ticks: {
                                 source: 'data',
                                 autoSkip: false,
@@ -191,18 +216,7 @@
                             bounds: 'ticks', // Start the chart at the first tick (full left)
                             offset: true // Ensure the chart starts at the full left
                         },
-                        y: {
-                            title: {
-                                display: true,
-                                text: label
-                            },
-                            reverse: reverseY,
-                            ticks: {
-                                callback: function(value) {
-                                    return formatNumber(value);
-                                }
-                            }
-                        }
+                        y: createYScale(label, reverseY)
                     }
                 }
             });
@@ -241,8 +255,7 @@
             }));
 
             // Calculate min and max dates
-            const minDate = new Date(Math.min(...data.tomoko.dates.concat(data.nkx.dates).map(date => new Date(date).getTime())));
-            const maxDate = new Date(Math.max(...data.tomoko.dates.concat(data.nkx.dates).map(date => new Date(date).getTime())));
+            const { min, max } = getMinMaxDate(data.tomoko.dates.concat(data.nkx.dates));
 
             new Chart(ctx, {
                 type: 'line',
@@ -310,8 +323,8 @@
                                 display: true,
                                 text: 'Date'
                             },
-                            min: new Date(minDate.getTime() - 24 * 60 * 60 * 1000).toISOString(), // Min date with padding
-                            max: new Date(maxDate.getTime() + 24 * 60 * 60 * 1000).toISOString(), // Max date with padding
+                            min: min.toISOString(),
+                            max: max.toISOString(),
                             ticks: {
                                 source: 'data',
                                 autoSkip: false,
@@ -322,17 +335,7 @@
                             bounds: 'ticks', // Start the chart at the first tick (full left)
                             offset: true // Ensure the chart starts at the full left
                         },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Score'
-                            },
-                            ticks: {
-                                callback: function(value) {
-                                    return formatNumber(value);
-                                }
-                            }
-                        }
+                        y: createYScale('Score')
                     }
                 }
             });
@@ -385,17 +388,7 @@
                                 text: 'Play Index'
                             }
                         },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'PP'
-                            },
-                            ticks: {
-                                callback: function(value) {
-                                    return formatNumber(value);
-                                }
-                            }
-                        }
+                        y: createYScale('PP')
                     }
                 }
             });
