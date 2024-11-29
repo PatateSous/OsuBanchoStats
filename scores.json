@@ -903,6 +903,23 @@
                 "pp": 153.655
             },
             {
+                "beatmap_id": "1612454",
+                "score": "594986",
+                "maxcombo": "126",
+                "count50": "0",
+                "count100": "4",
+                "count300": "180",
+                "countmiss": "1",
+                "countkatu": "3",
+                "countgeki": "38",
+                "perfect": "0",
+                "enabled_mods": "0",
+                "user_id": "14152889",
+                "date": "2024-11-29 18:35:33",
+                "rank": "A",
+                "pp": 153.159
+            },
+            {
                 "beatmap_id": "1610994",
                 "score": "1162197",
                 "maxcombo": "251",
@@ -1683,23 +1700,6 @@
                 "date": "2024-03-08 12:54:31",
                 "rank": "S",
                 "pp": 130.952
-            },
-            {
-                "beatmap_id": "1492012",
-                "score": "329841",
-                "maxcombo": "121",
-                "count50": "0",
-                "count100": "3",
-                "count300": "92",
-                "countmiss": "0",
-                "countkatu": "2",
-                "countgeki": "21",
-                "perfect": "1",
-                "enabled_mods": "576",
-                "user_id": "14152889",
-                "date": "2024-04-16 11:18:52",
-                "rank": "S",
-                "pp": 130.549
             }
         ]
     },
